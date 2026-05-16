@@ -26,20 +26,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 `,
   },
-  noExternal: [
-    (id) => {
-      const externals = [
-        '@ffmpeg-installer/ffmpeg',
-        'fluent-ffmpeg',
-        '@ffmpeg-installer/linux-x64',
-        '@ffmpeg-installer/darwin-x64',
-        '@ffmpeg-installer/win32-x64',
-        '@prisma/client',
-        'sharp',
-      ];
-      return !externals.some((ext) => id === ext || id.startsWith(`${ext}/`));
-    },
-  ],
+  noExternal: [/^((?!@ffmpeg-installer|fluent-ffmpeg|@prisma|sharp).)*$/],
   external: [
     '@prisma/client',
     '@ffmpeg-installer/ffmpeg',
