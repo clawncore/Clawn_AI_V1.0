@@ -1,5 +1,5 @@
 // @ts-ignore
-import { cpSync, existsSync } from 'fs';
+import { cpSync, existsSync, writeFileSync } from 'fs';
 
 import { defineConfig } from 'tsup';
 
@@ -24,6 +24,9 @@ const require = createRequire(import.meta.url);
   },
   noExternal: ['@figuro/chatwoot-sdk'],
   onSuccess: async () => {
+    // Create a redirector file for Render dashboard compatibility
+    writeFileSync('dist/main.js', 'import("./main.mjs");');
+
     if (existsSync('src/utils/translations')) {
       cpSync('src/utils/translations', 'dist/translations', { recursive: true });
     }
