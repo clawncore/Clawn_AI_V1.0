@@ -59,6 +59,7 @@ export abstract class BaseChatbotController<BotType = any, BotData extends BaseC
   settingsRepository: any;
   sessionRepository: any;
   userMessageDebounce: { [key: string]: { message: string; timeoutId: NodeJS.Timeout } } = {};
+  manualOverrideTimers: { [key: string]: NodeJS.Timeout } = {};
 
   // Name of the integration, to be set by the derived class
   protected abstract readonly integrationName: string;
@@ -869,17 +870,49 @@ export abstract class BaseChatbotController<BotType = any, BotData extends BaseC
       };
 
       // Handle stopping the bot if message is from me
-      if (stopBotFromMe && key.fromMe && session) {
-        await this.prismaRepository.integrationSession.update({
-          where: {
-            id: session.id,
-          },
-          data: {
-            status: 'paused',
-          },
-        });
+      if (stopBotFromMe && key.fromMe) {
+        if (session) {
+          await this.prismaRepository.integrationSession.update({
+            where: { id: session.id },
+            data: { status: 'paused' },
+          });
+        } else if (findBot) {
+          // Create a paused session so the AI doesn't reply to incoming messages immediately
+          await this.prismaRepository.integrationSession.create({
+            data: {
+              instanceId: String(instance.instanceId),
+              remoteJid: String(remoteJid),
+              sessionId: String(remoteJid),
+              botId: String(findBot.id),
+              status: 'paused',
+              type: String(this.getIntegrationType())
+            }
+          });
+        }
 
-        if (this.integrationName === 'Typebot') {
+        const timerKey = `${instance.instanceName}_${remoteJid}`;
+        if (this.manualOverrideTimers[timerKey]) {
+          clearTimeout(this.manualOverrideTimers[timerKey]);
+        }
+
+        // Set 10-minute countdown to automatically resume AI
+        this.manualOverrideTimers[timerKey] = setTimeout(async () => {
+          try {
+            await this.prismaRepository.integrationSession.updateMany({
+              where: {
+                instanceId: instance.instanceId,
+                remoteJid: remoteJid,
+                status: 'paused'
+              },
+              data: { status: 'opened' }
+            });
+            this.logger.log(`Resumed bot session for ${remoteJid} after 10 minutes of manual override`);
+          } catch (e: any) {
+            this.logger.error(`Error resuming session for ${remoteJid}: ${e.message}`);
+          }
+        }, 10 * 60 * 1000);
+
+        if (this.integrationName === 'Typebot' && session) {
           const typebotData = {
             remoteJid: remoteJid,
             status: 'paused',
@@ -896,8 +929,8 @@ export abstract class BaseChatbotController<BotType = any, BotData extends BaseC
         return;
       }
 
-      // Skip if session exists but not awaiting user input
-      if (session && session.status === 'closed') {
+      // Skip if session exists but not awaiting user input or is currently paused
+      if (session && (session.status === 'closed' || session.status === 'paused')) {
         return;
       }
 

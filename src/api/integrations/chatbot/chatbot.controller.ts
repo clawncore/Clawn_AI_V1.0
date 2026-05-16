@@ -27,6 +27,7 @@ export interface ChatbotControllerInterface {
   settingsRepository: any;
   sessionRepository: any;
   userMessageDebounce: { [key: string]: { message: string; timeoutId: NodeJS.Timeout } };
+  manualOverrideTimers: { [key: string]: NodeJS.Timeout };
 
   createBot(instance: InstanceDto, data: any): Promise<any>;
   findBot(instance: InstanceDto): Promise<any>;

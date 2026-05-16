@@ -56,6 +56,12 @@ export class OpenaiService extends BaseChatbotService<OpenaiBot, OpenaiSetting> 
     try {
       this.logger.log(`Starting process for remoteJid: ${remoteJid}, bot type: ${openaiBot.botType}`);
 
+      // STRICT RULE 1: Do not answer group messages
+      if (remoteJid.includes('@g.us')) {
+        this.logger.log(`Strict Rule: Ignoring group message from ${remoteJid}`);
+        return;
+      }
+
       // Handle audio message transcription
       if (content.startsWith('audioMessage|') && msg) {
         this.logger.log('Detected audio message, attempting to transcribe');
@@ -461,6 +467,51 @@ export class OpenaiService extends BaseChatbotService<OpenaiBot, OpenaiSetting> 
         this.logger.error(`Error parsing session context: ${error.message}`);
         // Continue with empty history if we can't parse the session data
         conversationHistory = [];
+      }
+    }
+
+    // STRICT RULE 2: If conversation history is empty, fetch the last 15 WhatsApp messages for context
+    if (conversationHistory.length === 0) {
+      try {
+        this.logger.log(`No existing AI session history found. Fetching last 15 WhatsApp messages for context.`);
+        const recentDbMessages = await this.prismaRepository.message.findMany({
+          where: {
+            instanceId: instance.instanceId,
+            AND: [
+              { key: { path: ['remoteJid'], equals: remoteJid } }
+            ]
+          },
+          orderBy: {
+            messageTimestamp: 'desc'
+          },
+          take: 15
+        });
+
+        const historyMessages = recentDbMessages.reverse().map((msg) => {
+          const isFromMe = (msg.key as any)?.fromMe;
+          let textContent = '';
+          const msgJson = msg.message as any;
+          
+          if (msgJson?.conversation) {
+            textContent = msgJson.conversation;
+          } else if (msgJson?.extendedTextMessage?.text) {
+            textContent = msgJson.extendedTextMessage.text;
+          } else if (msgJson?.imageMessage?.caption) {
+            textContent = msgJson.imageMessage.caption;
+          }
+          
+          if (!textContent) textContent = "[Media/Unsupported Message]";
+
+          return {
+            role: isFromMe ? 'assistant' : 'user',
+            content: textContent
+          };
+        });
+
+        conversationHistory = historyMessages;
+        this.logger.log(`Injected ${conversationHistory.length} previous WhatsApp messages into AI context.`);
+      } catch (error: any) {
+        this.logger.error(`Failed to fetch recent WhatsApp messages: ${error.message}`);
       }
     }
 
