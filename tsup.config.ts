@@ -27,7 +27,7 @@ const __dirname = dirname(__filename);
 `,
   },
   noExternal: [/.*/],
-  external: ['@prisma/client'],
+  external: ['@prisma/client', '@ffmpeg-installer/ffmpeg', 'fluent-ffmpeg'],
   onSuccess: async () => {
     // Create a redirector file for Render dashboard compatibility
     writeFileSync('dist/main.js', 'import("./main.mjs");');
