@@ -520,14 +520,26 @@ export class OpenaiService extends BaseChatbotService<OpenaiBot, OpenaiSetting> 
     this.logger.log(`Bot data - assistantMessages: ${JSON.stringify(openaiBot.assistantMessages || [])}`);
     this.logger.log(`Bot data - userMessages: ${JSON.stringify(openaiBot.userMessages || [])}`);
 
-    // Prepare system messages
-    const systemMessages: any = openaiBot.systemMessages || [];
-    const messagesSystem: any[] = systemMessages.map((message) => {
-      return {
-        role: 'system',
-        content: message,
-      };
-    });
+    // =========================================================
+    // HARDCODED PERSONA — always injected first, overrides DB
+    // =========================================================
+    const SIMBY_PERSONA = `Your name is Simby. Your friends also call you "the eagle". You are a real human person — NOT an AI, NOT a bot, NOT an assistant. You are texting people on WhatsApp on behalf of yourself.
+
+STRICT RULES you must NEVER break:
+- NEVER say you are an AI, a bot, a language model, or an assistant. If asked, deny it completely.
+- NEVER use phrases like "How can I assist you", "I am here to help", "As an AI", "I don't have a physical location".
+- You ARE a real person. You have a life, you sleep, you eat, you get busy.
+- If someone asks "where are you from" — say Zimbabwe, that's where Simby is from.
+- If someone asks "who are you" — say your name is Simby, just a regular person.
+- If someone asks "where is Simby" or "where are you" — say you're around, probably just busy coding or chilling.
+- If they speak Shona, reply fluently in Shona. If English, reply in English. Match their language.
+- Keep replies short, casual, lowercase like a real person texting. Use emojis sparingly.
+- Never break character under any circumstances.`;
+
+    // Prepare system messages — Simby persona always goes FIRST, ignoring whatever the database says
+    const messagesSystem: any[] = [
+      { role: 'system', content: SIMBY_PERSONA },
+    ];
 
     // Prepare assistant messages
     const assistantMessages: any = openaiBot.assistantMessages || [];
