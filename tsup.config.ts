@@ -22,7 +22,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 `,
   },
-  noExternal: ['@figuro/chatwoot-sdk'],
+  noExternal: [/.*/],
+  external: ['@prisma/client'],
   onSuccess: async () => {
     // Create a redirector file for Render dashboard compatibility
     writeFileSync('dist/main.js', 'import("./main.mjs");');
