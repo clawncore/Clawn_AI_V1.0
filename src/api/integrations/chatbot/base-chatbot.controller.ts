@@ -869,55 +869,13 @@ export abstract class BaseChatbotController<BotType = any, BotData extends BaseC
         participant: string;
       };
 
-      // Handle stopping the bot if message is from me (manual override sensor)
-      // Only pause if there is an EXISTING active session — don't block new conversations
-      if (stopBotFromMe && key.fromMe && session && session.status === 'opened') {
-        await this.prismaRepository.integrationSession.update({
-          where: { id: session.id },
-          data: { status: 'paused' },
-        });
-
-        const timerKey = `${instance.instanceName}_${remoteJid}`;
-        if (this.manualOverrideTimers[timerKey]) {
-          clearTimeout(this.manualOverrideTimers[timerKey]);
-        }
-
-        // Set 10-minute countdown to automatically resume AI
-        this.manualOverrideTimers[timerKey] = setTimeout(async () => {
-          try {
-            await this.prismaRepository.integrationSession.updateMany({
-              where: {
-                instanceId: instance.instanceId,
-                remoteJid: remoteJid,
-                status: 'paused'
-              },
-              data: { status: 'opened' }
-            });
-            this.logger.log(`Resumed bot session for ${remoteJid} after 10 minutes of manual override`);
-          } catch (e: any) {
-            this.logger.error(`Error resuming session for ${remoteJid}: ${e.message}`);
-          }
-        }, 10 * 60 * 1000);
-
-        if (this.integrationName === 'Typebot' && session) {
-          const typebotData = {
-            remoteJid: remoteJid,
-            status: 'paused',
-            session,
-          };
-          this.waMonitor.waInstances[instance.instanceName].sendDataWebhook(Events.TYPEBOT_CHANGE_STATUS, typebotData);
-        }
-
-        return;
-      }
-
       // Skip if not listening to messages from me
       if (!listeningFromMe && key.fromMe) {
         return;
       }
 
-      // Skip if session exists but not awaiting user input or is currently paused
-      if (session && (session.status === 'closed' || session.status === 'paused')) {
+      // Skip if session is closed
+      if (session && session.status === 'closed') {
         return;
       }
 
