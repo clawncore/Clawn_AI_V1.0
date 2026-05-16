@@ -1,5 +1,5 @@
-// @ts-nocheck
-const { cpSync } = require('fs');
+// @ts-ignore
+import { cpSync } from 'fs';
 
 import { defineConfig } from 'tsup';
 
