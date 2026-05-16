@@ -2826,7 +2826,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           const response = await axios.get(mediaMessage.media, config);
 
-          mimetype = response.headers['content-type'];
+          mimetype = (response.headers['content-type'] as any);
         }
       }
 
@@ -3928,8 +3928,8 @@ export class BaileysStartupService extends ChannelStartupService {
       }
       const typeMessage = getContentType(msg.message);
 
-      const ext = mimeTypes.extension(mediaMessage?.['mimetype']);
-      const fileName = mediaMessage?.['fileName'] || `${msg.key.id}.${ext}` || `${v4()}.${ext}`;
+      const extension = mimeTypes.extension(mediaMessage?.['mimetype'] as any);
+      const fileName = mediaMessage?.['fileName'] || `${msg.key.id}.${extension}` || `${v4()}.${extension}`;
 
       if (convertToMp4 && typeMessage === 'audioMessage') {
         try {
