@@ -19,7 +19,7 @@
     "db:studio": "npx prisma studio --schema ./prisma/postgresql-schema.prisma",
     "db:migrate:dev": "npx prisma migrate dev --schema ./prisma/postgresql-schema.prisma",
     "prepare": "husky",
-    "postinstall": "npm run build"
+    "postinstall": "npm run db:generate && npm run build"
   },
   "repository": {
     "type": "git",
