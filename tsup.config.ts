@@ -4,13 +4,25 @@ import { cpSync, existsSync } from 'fs';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src'],
+  entry: ['src/main.ts'],
   outDir: 'dist',
   splitting: false,
   sourcemap: true,
   clean: true,
   minify: true,
-  format: ['cjs'],
+  format: ['esm'],
+  outExtension() {
+    return {
+      js: '.mjs',
+    };
+  },
+  banner: {
+    js: `
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+`,
+  },
+  noExternal: ['@figuro/chatwoot-sdk'],
   onSuccess: async () => {
     if (existsSync('src/utils/translations')) {
       cpSync('src/utils/translations', 'dist/translations', { recursive: true });
