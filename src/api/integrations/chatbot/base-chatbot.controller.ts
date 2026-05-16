@@ -869,26 +869,13 @@ export abstract class BaseChatbotController<BotType = any, BotData extends BaseC
         participant: string;
       };
 
-      // Handle stopping the bot if message is from me
-      if (stopBotFromMe && key.fromMe) {
-        if (session) {
-          await this.prismaRepository.integrationSession.update({
-            where: { id: session.id },
-            data: { status: 'paused' },
-          });
-        } else if (findBot) {
-          // Create a paused session so the AI doesn't reply to incoming messages immediately
-          await this.prismaRepository.integrationSession.create({
-            data: {
-              instanceId: String(instance.instanceId),
-              remoteJid: String(remoteJid),
-              sessionId: String(remoteJid),
-              botId: String(findBot.id),
-              status: 'paused',
-              type: String(this.getIntegrationType())
-            }
-          });
-        }
+      // Handle stopping the bot if message is from me (manual override sensor)
+      // Only pause if there is an EXISTING active session — don't block new conversations
+      if (stopBotFromMe && key.fromMe && session && session.status === 'opened') {
+        await this.prismaRepository.integrationSession.update({
+          where: { id: session.id },
+          data: { status: 'paused' },
+        });
 
         const timerKey = `${instance.instanceName}_${remoteJid}`;
         if (this.manualOverrideTimers[timerKey]) {
