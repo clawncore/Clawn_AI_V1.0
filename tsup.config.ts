@@ -1,5 +1,5 @@
 // @ts-ignore
-import { cpSync } from 'fs';
+import { cpSync, existsSync } from 'fs';
 
 import { defineConfig } from 'tsup';
 
@@ -12,9 +12,15 @@ export default defineConfig({
   minify: true,
   format: ['cjs'],
   onSuccess: async () => {
-    cpSync('src/utils/translations', 'dist/translations', { recursive: true });
-    cpSync('views', 'dist/views', { recursive: true });
-    cpSync('public', 'dist/public', { recursive: true });
+    if (existsSync('src/utils/translations')) {
+      cpSync('src/utils/translations', 'dist/translations', { recursive: true });
+    }
+    if (existsSync('views')) {
+      cpSync('views', 'dist/views', { recursive: true });
+    }
+    if (existsSync('public')) {
+      cpSync('public', 'dist/public', { recursive: true });
+    }
   },
   loader: {
     '.json': 'file',
