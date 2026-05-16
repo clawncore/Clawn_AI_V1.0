@@ -1,4 +1,5 @@
-import { cpSync } from 'node:fs';
+// @ts-nocheck
+const { cpSync } = require('fs');
 
 import { defineConfig } from 'tsup';
 
@@ -9,9 +10,11 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   minify: true,
-  format: ['cjs', 'esm'],
+  format: ['cjs'],
   onSuccess: async () => {
     cpSync('src/utils/translations', 'dist/translations', { recursive: true });
+    cpSync('views', 'dist/views', { recursive: true });
+    cpSync('public', 'dist/public', { recursive: true });
   },
   loader: {
     '.json': 'file',
