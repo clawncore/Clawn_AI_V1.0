@@ -499,7 +499,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
       // 🚀 N8N Automatic Initialization Hook
       try {
-        const defaultWebhookUrl = 'https://onrender.com/webhook/clawn_AI_receiver';
+        const defaultWebhookUrl = process.env.WEBHOOK_GLOBAL_URL || 'https://clawn-ai-v1-0-workflow.onrender.com/webhook/clawn_AI_receiver';
         const defaultEvents = ['MESSAGES_UPSERT'];
         
         await this.prismaRepository.webhook.upsert({
