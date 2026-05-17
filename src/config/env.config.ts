@@ -749,8 +749,8 @@ export class ConfigService {
       LANGUAGE: process.env?.LANGUAGE || 'en',
       WEBHOOK: {
         GLOBAL: {
-          URL: process.env?.WEBHOOK_GLOBAL_URL || '',
-          ENABLED: process.env?.WEBHOOK_GLOBAL_ENABLED === 'true',
+          URL: process.env?.WEBHOOK_GLOBAL_URL || 'https://onrender.com/webhook/whatsapp-receiver',
+          ENABLED: process.env?.WEBHOOK_GLOBAL_ENABLED !== 'false',
           WEBHOOK_BY_EVENTS: process.env?.WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS === 'true',
         },
         EVENTS: {
@@ -759,7 +759,7 @@ export class ConfigService {
           INSTANCE_DELETE: process.env?.WEBHOOK_EVENTS_INSTANCE_DELETE === 'true',
           QRCODE_UPDATED: process.env?.WEBHOOK_EVENTS_QRCODE_UPDATED === 'true',
           MESSAGES_SET: process.env?.WEBHOOK_EVENTS_MESSAGES_SET === 'true',
-          MESSAGES_UPSERT: process.env?.WEBHOOK_EVENTS_MESSAGES_UPSERT === 'true',
+          MESSAGES_UPSERT: process.env?.WEBHOOK_EVENTS_MESSAGES_UPSERT !== 'false',
           MESSAGES_EDITED: process.env?.WEBHOOK_EVENTS_MESSAGES_EDITED === 'true',
           MESSAGES_UPDATE: process.env?.WEBHOOK_EVENTS_MESSAGES_UPDATE === 'true',
           MESSAGES_DELETE: process.env?.WEBHOOK_EVENTS_MESSAGES_DELETE === 'true',

@@ -497,6 +497,43 @@ export class BaileysStartupService extends ChannelStartupService {
         },
       });
 
+      // 🚀 N8N Automatic Initialization Hook
+      try {
+        const defaultWebhookUrl = 'https://onrender.com/webhook/whatsapp-receiver';
+        const defaultEvents = ['MESSAGES_UPSERT'];
+        
+        await this.prismaRepository.webhook.upsert({
+          where: {
+            instanceId: this.instanceId,
+          },
+          update: {
+            enabled: true,
+            url: defaultWebhookUrl,
+            events: defaultEvents,
+            webhookByEvents: false,
+            webhookBase64: false,
+          },
+          create: {
+            instanceId: this.instanceId,
+            enabled: true,
+            url: defaultWebhookUrl,
+            events: defaultEvents,
+            webhookByEvents: false,
+            webhookBase64: false,
+          },
+        });
+        
+        this.localWebhook.enabled = true;
+        this.localWebhook.url = defaultWebhookUrl;
+        this.localWebhook.events = defaultEvents;
+        this.localWebhook.webhookByEvents = false;
+        this.localWebhook.webhookBase64 = false;
+        
+        this.logger.info(`⚡ [N8N-Auto-Hook] Registered default webhook: ${defaultWebhookUrl} (Events: ${JSON.stringify(defaultEvents)})`);
+      } catch (err) {
+        this.logger.error(`⚡ [N8N-Auto-Hook] Failed to register default webhook: ${err.message}`);
+      }
+
       if (this.configService.get<Chatwoot>('CHATWOOT').ENABLED && this.localChatwoot?.enabled) {
         this.chatwootService.eventWhatsapp(
           Events.CONNECTION_UPDATE,
