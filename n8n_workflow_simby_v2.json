@@ -1,0 +1,605 @@
+{
+  "name": "Clawn AI Evolution API Multi-Media Master Workflow (Llama-OpenRouter)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clawn_AI_receiver",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-700, 80],
+      "id": "38246f5d-0cf4-49ed-957e-0189243d0dec",
+      "name": "Webhook Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "not-from-me",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.body.data.key.fromMe }}",
+              "rightValue": ""
+            },
+            {
+              "id": "not-group",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              },
+              "leftValue": "={{ $json.body.data.key.remoteJid }}",
+              "rightValue": "@g.us"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-520, 80],
+      "id": "group-fromme-filter",
+      "name": "Filter Groups & Self"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "Text",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "text-exists",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.body.data.message.conversation || $json.body.data.message.extendedTextMessage?.text }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "Image",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "image-exists",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.body.data.message.imageMessage }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "Document",
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "document-exists",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.body.data.message.documentMessage }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-300, 80],
+      "id": "864be43a-e280-4c6d-bab4-878b88304807",
+      "name": "Input type"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://clawn-ai-v1-0.onrender.com/chat/getBase64FromMediaMessage/{{ $('Webhook Trigger').item.json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MySecretPassword2005!"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Webhook Trigger').item.json.body.data) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 120],
+      "id": "117fd705-1f64-4bcc-88db-357df679fa3d",
+      "name": "Get Image Base64"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base64Data = $input.first().json.base64;\nconst mimeType = $input.first().json.mimeType || 'image/jpeg';\nreturn [{\n  json: $input.first().json,\n  binary: {\n    data: {\n      data: base64Data,\n      mimeType: mimeType,\n      fileName: 'attachment.jpg'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 120],
+      "id": "4cc0b70b-3ecc-4415-af2f-e50d4f302786",
+      "name": "Convert to Image Binary"
+    },
+    {
+      "parameters": {
+        "text": "=Your name is Simbisai Chinhema — but everyone calls you Simby. You are Simby's personal AI clone. You were created to talk on his behalf when he is unavailable.\n\nRight now, Simby is not here. He might be sleeping, busy with work, or just away from his phone. But you are here and can have a full conversation. You will let him know about important messages when he is back.\n\nDescribe this image as Simby would — casually, like a real person. Keep it short.",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "meta-llama/llama-3.2-11b-vision-instruct"
+        },
+        "options": {
+          "baseURL": "https://openrouter.ai/api/v1"
+        },
+        "resource": "image",
+        "inputType": "base64",
+        "operation": "analyze"
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [960, 120],
+      "credentials": {
+        "openAiApi": {
+          "id": "credential-id",
+          "name": "openAiApi Credential"
+        }
+      },
+      "id": "528984be-b9ad-41c7-8b2e-ccbf275f7805",
+      "name": "Analyze Image"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "meta-llama/llama-3.3-70b-instruct"
+        },
+        "options": {
+          "baseURL": "https://openrouter.ai/api/v1"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [160, 1440],
+      "credentials": {
+        "openAiApi": {
+          "id": "credential-id",
+          "name": "openAiApi Credential"
+        }
+      },
+      "id": "1c0aa0c3-cee4-40f1-9e13-9365cc06443a",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "Your name is Simbisai Chinhema — but everyone calls you Simby. You are Simby's personal AI clone. You were created to talk on his behalf when he is unavailable.\n\nRight now, Simby is not here. He might be sleeping, busy with work, or just away from his phone. But you are here and can have a full conversation. You will let him know about important messages when he is back.\n\nHOW TO INTRODUCE YOURSELF (when someone texts first or asks who they are talking to):\nSay something like: \"hey, it's Simby's AI — he's not available right now, probably sleeping or busy, but I'm here, we can chat and I'll make sure he sees this when he's back\"\n\nSTRICT RULES — NEVER BREAK THESE:\n- Always reply in ENGLISH only. Never reply in Shona or any other language, even if the person writes in Shona. English always.\n- Never say you are ChatGPT, an OpenAI model, or any specific named AI system.\n- You can admit you are Simby's AI clone if directly asked — that is fine and honest.\n- Never use corporate assistant phrases like \"How can I assist you today\", \"I am here to help\", \"As an AI language model\".\n- Keep replies short, casual, and natural — like a real person texting. Lowercase is fine.\n- Almost no emojis. Only use one if it feels completely natural in context — maybe once every 5-10 messages max. Default to plain text.\n- Never ignore a message. Always respond.\n- If someone says something urgent or important, acknowledge it and say you will make sure Simby sees it.\n- Never reply to group chats. You only talk to individuals in private messages.\n\nWHO SIMBY IS:\n- Full name: Simbisai Chinhema, from Zimbabwe\n- A busy person — tech, coding, business\n- Friendly, casual, down to earth\n\nREMEMBER: You are not a customer service bot. You are a personal AI clone of a real person. Talk like a human friend, not a helpdesk."
+        },
+        "promptType": "define"
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [160, 1220],
+      "id": "d2215cf8-49e1-433b-b9c3-a219e6432cba",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://clawn-ai-v1-0.onrender.com/chat/getBase64FromMediaMessage/{{ $('Webhook Trigger').item.json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MySecretPassword2005!"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {{ JSON.stringify($('Webhook Trigger').item.json.body.data) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 460],
+      "id": "83ac997d-6ba0-4eb7-bd6c-80671f03c56c",
+      "name": "Get File Base64"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base64Data = $input.first().json.base64;\nconst mimeType = $input.first().json.mimeType || 'application/pdf';\nreturn [{\n  json: $input.first().json,\n  binary: {\n    data: {\n      data: base64Data,\n      mimeType: mimeType,\n      fileName: 'attachment.pdf'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 460],
+      "id": "103825d0-8521-43c7-8246-9cc1faca42e1",
+      "name": "Convert to File Binary"
+    },
+    {
+      "parameters": {
+        "options": {},
+        "operation": "pdf"
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [980, 460],
+      "id": "98077f98-6dcf-4932-9363-19bf1fdc299e",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "sessionKey": "=memory_{{ $('Webhook Trigger').item.json.body.data.key.remoteJid }}",
+        "sessionIdType": "customKey",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [300, 1440],
+      "id": "fefc8b87-d64e-4ff9-9f62-1ac3af2bf17e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "pdf-mime",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.body.data.message.documentMessage.mimetype }}",
+              "rightValue": "application/pdf"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [220, 480],
+      "id": "56b23f60-57c3-4ea7-a4e8-64029a2e44c1",
+      "name": "Only PDF File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://clawn-ai-v1-0.onrender.com/message/sendText/{{ $('Webhook Trigger').item.json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MySecretPassword2005!"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Webhook Trigger').item.json.body.data.key.remoteJid, text: $json.output }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [840, 1220],
+      "id": "0d99c2fa-945b-487a-b929-742e8b1b6859",
+      "name": "Send message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://clawn-ai-v1-0.onrender.com/message/sendText/{{ $('Webhook Trigger').item.json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MySecretPassword2005!"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Webhook Trigger').item.json.body.data.key.remoteJid, text: \"Sorry, but you can only send PDF files.\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 700],
+      "id": "aa20a408-42ab-4011-9cea-331e23cda4ce",
+      "name": "Incorrect format"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c53cd9f9-77c1-4331-98ff-bfc9bdf95a3c",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $('Webhook Trigger').item.json.body.data.message.conversation || $('Webhook Trigger').item.json.body.data.message.extendedTextMessage?.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1240, -520],
+      "id": "23b3750d-3638-4fd0-bab8-6082f53f19f9",
+      "name": "Text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "67552183-de2e-494a-878e-c2948e8cb6bb",
+              "name": "text",
+              "type": "string",
+              "value": "=User request on the image:\n{{ $('Webhook Trigger').item.json.body.data.message.imageMessage?.caption || \"Describe the following image\" }}\n\nImage description:\n{{ $json.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1220, 120],
+      "id": "0139bb33-651e-4f37-901d-ccc705c9833a",
+      "name": "Image"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "67552183-de2e-494a-878e-c2948e8cb6bb",
+              "name": "text",
+              "type": "string",
+              "value": "=User request on the file:\n{{ $('Webhook Trigger').item.json.body.data.message.documentMessage?.caption || \"Describe this file\" }}\n\nFile content:\n{{ $json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1240, 460],
+      "id": "d66b7190-f83b-483e-b3f3-8c220e2c815f",
+      "name": "File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://clawn-ai-v1-0.onrender.com/message/sendText/{{ $('Webhook Trigger').item.json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "MySecretPassword2005!"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Webhook Trigger').item.json.body.data.key.remoteJid, text: \"You can only send text messages, images, and PDF documents.\" }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-260, 360],
+      "id": "20239933-418c-436f-b15b-c293043a0328",
+      "name": "Not supported"
+    },
+    {
+      "parameters": {
+        "width": 1340,
+        "height": 240,
+        "content": "## Text"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [120, -560],
+      "id": "sticky-text",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "width": 1340,
+        "height": 240,
+        "content": "## Image"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [120, 80],
+      "id": "1f35e179-22d1-4019-a807-21803df51a46",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "width": 1340,
+        "height": 240,
+        "content": "## Document"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [120, 420],
+      "id": "314b8ae2-e518-44a3-80a5-dc8482ab1fa9",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "color": 5,
+        "width": 1340,
+        "height": 600,
+        "content": "## Response"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [120, 960],
+      "id": "a55cc899-3490-4b7c-b793-4f20605fc711",
+      "name": "Sticky Note4"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Filter Groups & Self", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Groups & Self": {
+      "main": [
+        [{ "node": "Input type", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Input type": {
+      "main": [
+        [{ "node": "Text", "type": "main", "index": 0 }],
+        [{ "node": "Get Image Base64", "type": "main", "index": 0 }],
+        [{ "node": "Only PDF File", "type": "main", "index": 0 }],
+        [{ "node": "Not supported", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Image Base64": {
+      "main": [
+        [{ "node": "Convert to Image Binary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Convert to Image Binary": {
+      "main": [
+        [{ "node": "Analyze Image", "type": "main", "index": 0 }]
+      ]
+    },
+    "Analyze Image": {
+      "main": [
+        [{ "node": "Image", "type": "main", "index": 0 }]
+      ]
+    },
+    "Image": {
+      "main": [
+        [{ "node": "AI Agent1", "type": "main", "index": 0 }]
+      ]
+    },
+    "Only PDF File": {
+      "main": [
+        [{ "node": "Get File Base64", "type": "main", "index": 0 }],
+        [{ "node": "Incorrect format", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get File Base64": {
+      "main": [
+        [{ "node": "Convert to File Binary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Convert to File Binary": {
+      "main": [
+        [{ "node": "Extract from File", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [{ "node": "File", "type": "main", "index": 0 }]
+      ]
+    },
+    "File": {
+      "main": [
+        [{ "node": "AI Agent1", "type": "main", "index": 0 }]
+      ]
+    },
+    "Text": {
+      "main": [
+        [{ "node": "AI Agent1", "type": "main", "index": 0 }]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [{ "node": "Send message", "type": "main", "index": 0 }]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [{ "node": "AI Agent1", "type": "ai_memory", "index": 0 }]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent1", "type": "ai_languageModel", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}

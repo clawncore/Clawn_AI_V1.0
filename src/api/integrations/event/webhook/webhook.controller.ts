@@ -230,7 +230,10 @@ export class WebhookController extends EventController implements EventControlle
       apikey: apiKey,
     };
 
-    if (local && instance?.enabled) {
+    // ── LOCAL INSTANCE WEBHOOK ────────────────────────────────────────────────
+    // Skip if global webhook is enabled — global already handles delivery to n8n.
+    // Sending both causes n8n to receive the message twice → two AI replies.
+    if (local && instance?.enabled && !webhookConfig.GLOBAL?.ENABLED) {
       if (Array.isArray(webhookLocal) && webhookLocal.includes(we)) {
         let baseURL: string;
 
@@ -275,6 +278,8 @@ export class WebhookController extends EventController implements EventControlle
           });
         }
       }
+    } else if (local && instance?.enabled && webhookConfig.GLOBAL?.ENABLED) {
+      this.logger.verbose(`Skipping local instance webhook — global webhook is active. Preventing double-send to n8n.`);
     }
 
     if (webhookConfig.GLOBAL?.ENABLED) {
