@@ -13,6 +13,7 @@ import { WAMonitoringService } from '@api/services/monitor.service';
 import { Logger } from '@config/logger.config';
 import { IntegrationSession } from '@prisma/client';
 import { findBotByTrigger } from '@utils/findBotByTrigger';
+import { configService, Webhook } from '@config/env.config';
 
 export type EmitData = {
   instance: InstanceDto;
@@ -85,26 +86,9 @@ export class ChatbotController {
     pushName?: string;
     isIntegration?: boolean;
   }): Promise<void> {
-    const emitData = {
-      instance,
-      remoteJid,
-      msg,
-      pushName,
-      isIntegration,
-    };
-    evolutionBotController.emit(emitData);
-
-    typebotController.emit(emitData);
-
-    openaiController.emit(emitData);
-
-    difyController.emit(emitData);
-
-    n8nController.emit(emitData);
-
-    evoaiController.emit(emitData);
-
-    flowiseController.emit(emitData);
+    // Completely disabled: all replies are strictly and exclusively handled by n8n via webhook integration.
+    this.logger.log(`Skipping internal chatbot controllers for ${instance.instanceName}. n8n handles all replies.`);
+    return;
   }
 
   public processDebounce(

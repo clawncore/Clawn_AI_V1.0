@@ -9,6 +9,7 @@ import axios, { AxiosInstance } from 'axios';
 import * as jwt from 'jsonwebtoken';
 
 import { EmitData, EventController, EventControllerInterface } from '../event.controller';
+import { BotStateManager } from './bot-state.manager';
 
 export class WebhookController extends EventController implements EventControllerInterface {
   private readonly logger = new Logger('WebhookController');
@@ -75,6 +76,58 @@ export class WebhookController extends EventController implements EventControlle
   }: EmitData): Promise<void> {
     if (integration && !integration.includes('webhook')) {
       return;
+    }
+
+    // ── ADMIN COMMAND INTERCEPTION ─────────────────────────────────────────────
+    // Only runs for messages.upsert events from the admin number
+    if (event === 'messages.upsert') {
+      const senderJid = data?.key?.remoteJid;
+      const fromMe = data?.key?.fromMe;
+      const msgText: string =
+        data?.message?.conversation ||
+        data?.message?.extendedTextMessage?.text ||
+        '';
+      const cmd = msgText.trim().toLowerCase();
+
+      if (fromMe === true && BotStateManager.isAdmin(senderJid)) {
+        // This is YOU sending a command from your admin number
+        let reply: string | null = null;
+
+        if (cmd === 'bot on') {
+          reply = await BotStateManager.enable();
+        } else if (cmd === 'bot off') {
+          reply = await BotStateManager.disable();
+        } else if (cmd === 'bot schedule till morning' || cmd === 'bot schedule') {
+          reply = await BotStateManager.scheduleTillMorning();
+        } else if (cmd === 'bot status') {
+          reply = await BotStateManager.getStatusMessage();
+        }
+
+        if (reply !== null) {
+          this.logger.log(`Admin command from ${senderJid}: "${cmd}" → ${reply}`);
+          const instanceObj = this.monitor.waInstances[instanceName];
+          if (instanceObj) {
+            try {
+              await instanceObj.textMessage({
+                number: BotStateManager.ADMIN_JID,
+                text: reply,
+              });
+            } catch (err) {
+              this.logger.error(`Failed to send admin confirmation: ${err.message}`);
+            }
+          }
+          return; // Never forward admin commands to n8n
+        }
+      }
+    }
+
+    // ── GLOBAL BOT ENABLED CHECK ──────────────────────────────────────────────
+    // If bot is disabled (via command or schedule), discard ALL message webhooks silently
+    if (event === 'messages.upsert' || event === 'send.message') {
+      if (!BotStateManager.isActive()) {
+        this.logger.log(`Bot is currently OFF. Discarding webhook event: ${event}`);
+        return;
+      }
     }
 
     // 1. Group check: Ignore all group events for messages
