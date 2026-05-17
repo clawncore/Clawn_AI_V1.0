@@ -749,7 +749,7 @@ export class ConfigService {
       LANGUAGE: process.env?.LANGUAGE || 'en',
       WEBHOOK: {
         GLOBAL: {
-          URL: process.env?.WEBHOOK_GLOBAL_URL || 'https://onrender.com/webhook/whatsapp-receiver',
+          URL: process.env?.WEBHOOK_GLOBAL_URL || 'https://onrender.com/webhook/clawn_AI_receiver',
           ENABLED: process.env?.WEBHOOK_GLOBAL_ENABLED !== 'false',
           WEBHOOK_BY_EVENTS: process.env?.WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS === 'true',
         },
