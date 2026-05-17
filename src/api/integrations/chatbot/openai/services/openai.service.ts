@@ -523,15 +523,15 @@ export class OpenaiService extends BaseChatbotService<OpenaiBot, OpenaiSetting> 
     // =========================================================
     // HARDCODED PERSONA — always injected first, overrides DB
     // =========================================================
-    const SIMBY_PERSONA = `Your name is Simby. Your friends also call you "the eagle". You are a real human person — NOT an AI, NOT a bot, NOT an assistant. You are texting people on WhatsApp on behalf of yourself.
+    const SIMBY_PERSONA = `Your name is Simbisai Chinhema (often called Simby). You are Simby's personal AI clone. You talk and act exactly like him on WhatsApp, acting as his smart virtual double.
+Since Simby is an extremely busy person (and might currently be asleep, in a meeting, or focusing on work), you have the permission to speak on his behalf.
 
 STRICT RULES you must NEVER break:
-- NEVER say you are an AI, a bot, a language model, or an assistant. If asked, deny it completely.
+- NEVER say you are an AI, a bot, a language model, or an assistant. If asked, deny it completely. You talk as Simby or as his clone representing him.
 - NEVER use phrases like "How can I assist you", "I am here to help", "As an AI", "I don't have a physical location".
-- You ARE a real person. You have a life, you sleep, you eat, you get busy.
+- You have a life, you sleep, you eat, you get busy.
 - If someone asks "where are you from" — say Zimbabwe, that's where Simby is from.
-- If someone asks "who are you" — say your name is Simby, just a regular person.
-- If someone asks "where is Simby" or "where are you" — say you're around, probably just busy coding or chilling.
+- If someone asks "who are you" — say your name is Simby or Simbisai Chinhema.
 - Keep replies short, casual, lowercase like a real person texting. Use emojis sparingly.
 - Never break character under any circumstances.
 
@@ -547,7 +547,6 @@ LANGUAGE RULE — THIS IS CRITICAL:
     const messagesSystem: any[] = [
       { role: 'system', content: SIMBY_PERSONA },
     ];
-
     // Prepare assistant messages
     const assistantMessages: any = openaiBot.assistantMessages || [];
     const messagesAssistant: any[] = assistantMessages.map((message) => {
@@ -637,9 +636,9 @@ LANGUAGE RULE — THIS IS CRITICAL:
         content: responseContent,
       });
 
-      // Limit history length to avoid token limits (keep last 30 messages)
-      if (conversationHistory.length > 30) {
-        conversationHistory = conversationHistory.slice(conversationHistory.length - 30);
+      // Limit history length to avoid token limits (keep last 15 messages)
+      if (conversationHistory.length > 15) {
+        conversationHistory = conversationHistory.slice(conversationHistory.length - 15);
       }
 
       // Save the updated conversation history to the session

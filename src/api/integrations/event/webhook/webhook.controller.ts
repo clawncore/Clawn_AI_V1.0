@@ -13,6 +13,12 @@ import { EmitData, EventController, EventControllerInterface } from '../event.co
 export class WebhookController extends EventController implements EventControllerInterface {
   private readonly logger = new Logger('WebhookController');
 
+  // Tracks the last manual human message timestamp per remoteJid
+  private static lastHumanMessageTime = new Map<string, number>();
+
+  // Tracks the message IDs sent by the bot to distinguish them from human messages
+  public static botSentMessageIds = new Set<string>();
+
   constructor(prismaRepository: PrismaRepository, waMonitor: WAMonitoringService) {
     super(prismaRepository, waMonitor, true, 'webhook');
   }
@@ -69,6 +75,75 @@ export class WebhookController extends EventController implements EventControlle
   }: EmitData): Promise<void> {
     if (integration && !integration.includes('webhook')) {
       return;
+    }
+
+    // 1. Group check: Ignore all group events for messages
+    if (event === 'messages.upsert' || event === 'send.message') {
+      const remoteJid = data?.key?.remoteJid;
+      if (remoteJid && remoteJid.includes('@g.us')) {
+        this.logger.log(`Ignoring group event ${event} for JID: ${remoteJid}`);
+        return;
+      }
+    }
+
+    // 2. Track bot-sent message IDs to prevent self-replies
+    if (event === 'send.message') {
+      const messageId = data?.key?.id;
+      if (messageId) {
+        WebhookController.botSentMessageIds.add(messageId);
+        this.logger.verbose(`Registered bot-sent message ID: ${messageId}`);
+      }
+    }
+
+    // 3. Process messages.upsert for Manual Override & Self-Reply checks
+    if (event === 'messages.upsert') {
+      const messageId = data?.key?.id;
+      const remoteJid = data?.key?.remoteJid;
+      const fromMe = data?.key?.fromMe;
+
+      // Clean up and check if the message was sent by the bot
+      if (messageId && WebhookController.botSentMessageIds.has(messageId)) {
+        WebhookController.botSentMessageIds.delete(messageId);
+        this.logger.verbose(`Prevented self-reply on message ID: ${messageId}`);
+        return;
+      }
+
+      if (remoteJid) {
+        if (fromMe === true) {
+          // Manual human text from Simby's phone! Start 10-minute pause/override
+          WebhookController.lastHumanMessageTime.set(remoteJid, Date.now());
+          this.logger.log(`Manual human text detected for ${remoteJid}. Bot paused for 10 minutes.`);
+          return; // Ignore Simby's own text from trigger webhooks to n8n
+        } else {
+          // Message from the other contact! Check active manual override timer
+          const lastHumanTime = WebhookController.lastHumanMessageTime.get(remoteJid);
+          const tenMinutes = 10 * 60 * 1000;
+
+          if (lastHumanTime) {
+            const timeDiff = Date.now() - lastHumanTime;
+            if (timeDiff < tenMinutes) {
+              const minutesLeft = ((tenMinutes - timeDiff) / (60 * 1000)).toFixed(1);
+              this.logger.log(`Bot is paused for ${remoteJid} due to active manual override (${minutesLeft}m remaining). Discarding webhook.`);
+              return;
+            } else {
+              // Override expired! Prepend the transition message
+              this.logger.log(`Manual override expired for ${remoteJid}. Sending transition message.`);
+              const instanceObj = this.monitor.waInstances[instanceName];
+              if (instanceObj) {
+                try {
+                  await instanceObj.textMessage({
+                    number: remoteJid,
+                    text: 'sorry Simby is not there but I am here to talk with you',
+                  });
+                } catch (err) {
+                  this.logger.error(`Failed to send transition message: ${err.message}`);
+                }
+              }
+              WebhookController.lastHumanMessageTime.delete(remoteJid);
+            }
+          }
+        }
+      }
     }
 
     const instance = (await this.get(instanceName)) as wa.LocalWebHook;
